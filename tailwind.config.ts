@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {},
     fontFamily: {
-      sans: ["var(--my-font-)"],
+      sans: ["var(--font-sans)"],
     },
     colors: {
       amber: colors.amber,
