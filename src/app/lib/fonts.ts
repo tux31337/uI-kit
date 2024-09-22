@@ -2,9 +2,14 @@ import localFont from "next/font/local";
 export const baseFonts = localFont({
   src: [
     {
-      path: "../../../public/fonts/NanumPenScript-Regular.ttf",
+      path: "../../../public/fonts/Mulish-ExtraLight.woff2",
       weight: "200",
       style: "normal",
+    },
+    {
+      path: "../../../public/fonts/Mulish-ExtraLightItalic.woff2",
+      weight: "200",
+      style: "italic",
     },
     {
       path: "../../../public/fonts/Mulish-Light.woff2",

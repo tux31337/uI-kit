@@ -18,6 +18,7 @@ const config: StorybookConfig = {
       from: "../public/fonts",
       to: "/public/fonts",
     },
+    "../public",
   ],
 };
 export default config;
