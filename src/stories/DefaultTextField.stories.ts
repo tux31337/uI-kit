@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
 
 const meta = {
-  title: "Text/Field", // 경로를 나타낸다.
+  title: "TextFields/DefaultTextField", // 경로를 나타낸다.
   component: DefaultTextField, // 해당 component의 스토리를 작성했다.
   parameters: {
     layout: "centered",
@@ -11,6 +11,11 @@ const meta = {
   tags: ["autodocs"],
   argTypes: {
     errorMessage: { control: "text", description: "에러메시지 내용" },
+    isError: {
+      control: "boolean",
+      description: "에러 상태 여부",
+      defaultValue: false,
+    },
     iconPath: {
       control: "text",
       description: "이미지의 경로",
@@ -38,5 +43,6 @@ export const Default: Story = {
     alt: "icon",
     placeholder: "텍스트를 입력해주세요",
     value: "",
+    isError: false,
   },
 };
