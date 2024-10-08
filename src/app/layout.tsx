@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "./lib/utils";
 import { baseFonts } from "./lib/fonts";
+import { WebsocketProvider } from "./components/WebsocketContext";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,7 +17,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={cn(baseFonts.variable, "font-sans")}>{children}</body>
+      <body className={cn(baseFonts.variable, "font-sans")}>
+        <WebsocketProvider>{children}</WebsocketProvider>
+      </body>
     </html>
   );
 }

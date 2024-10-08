@@ -10,8 +10,21 @@ type coordinateXY = {
 
 type CurrentShapeProps = coordinateXY[];
 
-const GameComponent = () => {
+type GameComponentProps = {
+  width: number;
+  height: number;
+  distance: number;
+  range: number;
+};
+
+const GameComponent = (props: GameComponentProps) => {
   const gameContainerRef = useRef(null);
+  const { width, height, distance, range } = props;
+
+  const pixelsPerDistance = height / distance;
+  const pixelsPerRange = width / range;
+  const center = width / 2;
+
   const [game, setGame] = useState<Phaser.Game | null>(null);
 
   let isDrawing = false;
@@ -20,16 +33,19 @@ const GameComponent = () => {
   let startPoint: coordinateXY;
   let lastPoint: coordinateXY;
   let drawnShapes: CurrentShapeProps[] = [];
+  const ballSprites: Phaser.GameObjects.Image[] = []; // 스프라이트를 저장할 배열
 
   useEffect(() => {
+    const ballList: any[] = [];
     const preload: Phaser.Types.Scenes.ScenePreloadCallback = function (
       this: Phaser.Scene
     ) {
       const scene = this;
       scene.load.image("successBall", "./whiteBall.png");
       scene.load.image("failBall", "./redBall.png");
+      scene.load.image("yellowBall", "./yellowBall.png");
     };
-
+    const randomPointList: any[] = [];
     const update = function () {};
 
     const create: Phaser.Types.Scenes.ScenePreloadCallback = function (
@@ -79,12 +95,21 @@ const GameComponent = () => {
         );
 
         key9.on("down", () => {
-          console.log("newGame", newGame);
-          const randomX = Phaser.Math.Between(0, Number(newGame.config.width));
-          const randomY = Phaser.Math.Between(0, Number(newGame.config.height));
-          const randomPoint = { x: randomX, y: randomY };
+          const randomX = Phaser.Math.Between(-20, 20); // X축 최대 200
+          const randomY = Phaser.Math.Between(0, 200);
 
-          console.log(`랜덤 좌표: (${randomPoint.x}, ${randomPoint.y})`);
+          const realY = randomY * pixelsPerDistance;
+          const realX = randomY * pixelsPerDistance;
+
+          const randomPoint = {
+            x: center + randomX * pixelsPerRange,
+            y: 1080 - randomY * pixelsPerDistance,
+          };
+
+          randomPointList.push({
+            x: randomPoint.x,
+            y: randomPoint.y,
+          });
 
           let isInsideAnyShape = false;
           drawnShapes.forEach((shape) => {
@@ -93,39 +118,82 @@ const GameComponent = () => {
             }
           });
 
+          const ball = {
+            x: realX - center,
+            y: realY,
+            isInside: isInsideAnyShape,
+          };
+
+          ballSprites.forEach((sprite) => {
+            sprite.destroy(); // 기존 스프라이트 제거
+          });
+
+          // 성공한 공들 중 가장 먼 공 찾기
+          let furthestBall = null;
+          let maxDistance = 0;
+
+          ballList.push(ball);
+
+          ballList.forEach((b) => {
+            if (b.isInside) {
+              const distance = b.y;
+              if (distance > maxDistance) {
+                maxDistance = distance;
+                furthestBall = b;
+              }
+            }
+          });
+
+          // 공들을 다시 그리기
+          ballList.forEach((b, index) => {
+            let sprite;
+            if (!b.isInside) {
+              // 실패한 공 (빨간색)
+              sprite = scene.add.image(
+                randomPointList[index].x,
+                randomPointList[index].y,
+                "failBall"
+              );
+            } else if (b === furthestBall) {
+              // 가장 먼 공 (노란색)
+              sprite = scene.add.image(
+                randomPointList[index].x,
+                randomPointList[index].y,
+                "yellowBall"
+              );
+            } else {
+              // 성공한 공 (흰색)
+              sprite = scene.add.image(
+                randomPointList[index].x,
+                randomPointList[index].y,
+                "successBall"
+              );
+            }
+
+            sprite.setDepth(3);
+            sprite.setDisplaySize(32, 32);
+            ballSprites.push(sprite); // 새로 그린 공을 배열에 저장
+          });
+
+          // 공 그리기
           if (!isInsideAnyShape) {
             const sprite = newGame.scene.scenes[0].add.image(
               randomPoint.x,
               randomPoint.y,
-              "failBall" // successBall 이미지를 사용
+              "failBall" // 실패 공 이미지
             );
-
             sprite.setDepth(3);
-            sprite.setDisplaySize(32, 32); // 원래 원의 크기와 비슷하게 이미지 크기를 조정
-
-            // const circle = newGame.scene.scenes[0].add.circle(
-            //   randomPoint.x,
-            //   randomPoint.y,
-            //   4,
-            //   0xff0000
-            // );
-            // circle.setDepth(3);
+            sprite.setDisplaySize(32, 32);
+            ballSprites.push(sprite);
           } else {
-            // const circle = newGame.scene.scenes[0].add.circle(
-            //   randomPoint.x,
-            //   randomPoint.y,
-            //   4,
-            //   0xffff00
-            // );
             const sprite = newGame.scene.scenes[0].add.image(
               randomPoint.x,
               randomPoint.y,
-              "successBall" // successBall 이미지를 사용
+              ball === furthestBall ? "yellowBall" : "successBall" // 가장 먼 공이면 노란색, 아니면 성공 공 이미지
             );
             sprite.setDepth(3);
-
             sprite.setDisplaySize(32, 32);
-            // circle.setDepth(3);
+            ballSprites.push(sprite);
           }
         });
       }
@@ -133,8 +201,8 @@ const GameComponent = () => {
 
     const config = {
       type: Phaser.AUTO,
-      width: 1920,
-      height: 1080,
+      width,
+      height,
       parent: gameContainerRef.current, // React ref를 Phaser가 렌더링할 DOM 요소로 설정
       scene: {
         preload,
@@ -183,6 +251,7 @@ const GameComponent = () => {
     scene: Phaser.Scene,
     shape: CurrentShapeProps
   ) {
+    console.log("addTilesFromShape");
     const polygonPoints = shape.map((point: any) => ({
       x: point?.x,
       y: point?.y,
@@ -194,7 +263,7 @@ const GameComponent = () => {
     const graphics = scene.add.graphics();
     graphics.setDepth(2);
     // graphics.fillStyle(0x009900, 1);
-    fillPolygonInterior(scene, graphics, polygon);
+    fillPolygonInteriorWithScanLine(scene, graphics, polygon);
 
     //graphics.fillPoints(polygon.points, true);
     // Phaser.Geom.Polygon.Close(polygon);
@@ -206,12 +275,47 @@ const GameComponent = () => {
   ): boolean {
     let result = false;
     polygonList.forEach((polygon) => {
+      console.log("hihihihhihihi???");
       if (Phaser.Geom.Polygon.Contains(polygon, point.x, point.y)) {
         result = true;
       }
     });
 
     return result;
+  };
+
+  const fillPolygonInteriorWithScanLine = function (
+    scene: Phaser.Scene,
+    graphics: Phaser.GameObjects.Graphics,
+    polygon: Phaser.Geom.Polygon
+  ) {
+    const bounds = Phaser.Geom.Polygon.GetAABB(polygon);
+
+    for (let y = bounds.y; y < bounds.bottom; y++) {
+      let intersections: number[] = [];
+
+      // 각 줄에서 다각형과 교차하는 점 찾기
+      for (let i = 0; i < polygon.points.length; i++) {
+        let p1 = polygon.points[i];
+        let p2 = polygon.points[(i + 1) % polygon.points.length];
+
+        if ((p1.y <= y && p2.y > y) || (p1.y > y && p2.y <= y)) {
+          let intersectX = p1.x + ((y - p1.y) * (p2.x - p1.x)) / (p2.y - p1.y);
+          intersections.push(intersectX);
+        }
+      }
+
+      // 교차점 정렬
+      intersections.sort((a, b) => a - b);
+
+      // 교차점 쌍으로 내부 점을 채우기
+      for (let i = 0; i < intersections.length; i += 2) {
+        let xStart = Math.ceil(intersections[i]);
+        let xEnd = Math.floor(intersections[i + 1]);
+        graphics.fillStyle(0x009900, 1);
+        graphics.fillRect(xStart, y, xEnd - xStart, 1);
+      }
+    }
   };
 
   const fillPolygonInterior = function (
@@ -221,11 +325,12 @@ const GameComponent = () => {
   ) {
     // 다각형의 바운딩 박스 구하기
     const bounds = Phaser.Geom.Polygon.GetAABB(polygon);
-
+    console.log("boundsboundsbounds", bounds);
     // 바운딩 박스 내의 점을 순회하며, 다각형 내부에 있는지 검사
     for (let x = bounds.x; x < bounds.right; x++) {
       for (let y = bounds.y; y < bounds.bottom; y++) {
         // 해당 점이 다각형 내부에 있으면 점을 그린다
+        console.log("hihihihi??~~~~~");
         if (Phaser.Geom.Polygon.Contains(polygon, x, y)) {
           graphics.fillStyle(0x009900, 1);
           graphics.fillPoint(x, y);
@@ -234,7 +339,7 @@ const GameComponent = () => {
     }
   };
 
-  return <div ref={gameContainerRef} className="w-[480px] h-[480px]"></div>; // Phaser 게임이 렌더링될 DOM 요소
+  return <div ref={gameContainerRef}></div>; // Phaser 게임이 렌더링될 DOM 요소
 };
 
 export default GameComponent;
